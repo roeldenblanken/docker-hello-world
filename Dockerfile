@@ -12,7 +12,7 @@ FROM build-tools AS retrieve
 
 # Define build argument for version
 ARG VERSION
-ENV VERSION ${VERSION:-1.14.2}
+ENV VERSION ${VERSION:-1.17.0}
 
 # Retrieve and verify Nginx source
 RUN wget -q http://nginx.org/download/nginx-${VERSION}.tar.gz   --no-check-certificate  && \
@@ -28,7 +28,8 @@ WORKDIR nginx-${VERSION}
 # Build and install nginx
 RUN ./configure                                                      \
         --with-ld-opt="-static"                                      \
-        --with-http_sub_module                                    && \
+        --with-http_sub_module                                    	 \
+		--without-http_gzip_module 								  && \
     make install                                                  && \
     strip /usr/local/nginx/sbin/nginx							   
 	
@@ -51,6 +52,10 @@ RUN touch /run/nginx.pid  /var/run/nginx.pid && mkdir -p /var/log/nginx /var/lib
 
 RUN chgrp -R 0 /run/nginx.pid /var/run/nginx.pid /var/log/nginx /var/lib/nginx /usr/local/nginx  && \
     chmod -R g=u /run/nginx.pid /var/run/nginx.pid /var/log/nginx /var/lib/nginx /usr/local/nginx 
+
+# Install mysql client for checking the DB
+RUN apk update && \
+    apk add mysql-client
 	
 # Add entrypoint script
 COPY docker-entrypoint.sh /

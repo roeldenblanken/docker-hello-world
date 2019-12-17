@@ -1,0 +1,37 @@
+version: 0.2
+
+env:
+  variables:
+    # Defaults and can be overwritten by CodeBuild or CodePipeline
+    ENVIRONMENT: "dev"    
+    REPOSITORY: "blankia"
+    PROJECT: "hello-world"
+    DEPLOY_ACTION: ""
+  parameter-store:
+    DOCKER_USERNAME: "docker_username"
+    DOCKER_PASSWORD: "docker_password"  
+phases:
+  install:
+    runtime-versions:
+      docker: 18
+    commands:
+      # install required binary
+      - echo Logging in to Docker hub...
+      - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+      - echo --------------------START ENVIRONMENT VARIABLES--------------------
+      - env
+      - echo --------------------END ENVIRONMENT VARIABLES--------------------
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...   
+      - cd $CODEBUILD_SRC_DIR && ls -ltr
+      - chmod 777 -R *
+      - docker build -t blankia/hello-world .
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      - docker push $REPOSITORY/$PROJECT:latest
+      - if [ -n "${DEPLOY_ACTION}" ] ; then ${DEPLOY_ACTION} ; fi
+      - echo "Completed on `date`"

@@ -47,6 +47,18 @@ echo "<img style=\""$style"\" src=\""$src"\" alt=\""$alt"\">" > $tmpfile
 sed -i '/^.\+<\/title>/r '"$tmpfile"'' ./index.html
 rm -rf ./${tmpfile}
 
+# Add 'database status'-script to add the status to the static HTML page 
+if [ ! -z ${DB_ENDPOINT+x} ] && [ ! -z ${DB_USER+x} ] &&  [ ! -z ${DB_PASSWORD+x} ] &&  [ ! -z ${DB_BASE+x} ] &&  [ ! -z ${DB_PORT+x} ]; then
+	echo "Starting db connection script"
+	# create shell script to check the db connection
+	while true; do mysql -h $DB_ENDPOINT -u $DB_USER -p$DB_PASSWORD -D $DB_BASE  -P $DB_PORT -e 'quit' ; if [[ $? -eq 0 ]]; then sed -i "/<h2>Version/ i <h5>DB Connections status: `date` OK<\/h5>" /usr/local/nginx/html/index.html; sleep 30; else sed -i "/<h2>Version/ i <h5>DB Connections status: `date` FAIL<\/h5>" /usr/local/nginx/html/index.html; sleep 30; fi; done &
+	sed -i "/<h2>Version/ i <h5>DB Connections status: `date` START<\/h5>" /usr/local/nginx/html/index.html;
+else
+	echo "Skipping db connection script because not all env variables have been set"
+	env
+fi
+
+# 
 # Exec what has been supplied as arguments for the container/pod
 # (default: "/usr/local/nginx/sbin/nginx", "-g", "daemon off;")
 exec "$@"

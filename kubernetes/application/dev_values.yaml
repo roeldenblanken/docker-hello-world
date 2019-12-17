@@ -1,0 +1,92 @@
+# Default values for application.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+env: DEV
+namespace: default
+
+replicaCount: 1
+
+image:
+  repository: blankia/hello-world:latest
+  pullPolicy: IfNotPresent
+  port: 8080
+  env:
+   enabled: true
+   data:
+     - name: COLOR
+       value: "red"
+     - name: NODE_NAME
+       value: ""
+     - name: DB_ENDPOINT
+       value: ""
+     - name: DB_USER
+       value: ""
+     - name: DB_PASSWORD
+       value: ""
+     - name: DB_BASE
+       value: ""
+     - name: DB_PORT
+       value: ""
+
+db_password:
+  enabled: false
+
+# Create the configMap first with the Make file: "make configMap dev-example-configmap /root/helm/application/files/common.properties"
+volumes:
+ enabled: false
+ data:
+  - name: example-configmap-volume
+    configMap:
+      name: example-configmap ### will always be prefixed with the lowercase {{ env }} variable in the final deployment type yaml
+
+pvc_volumes:
+ enabled: false
+ data:
+  - name: example-persistentvolume-claim
+    persistentVolumeClaim:
+      claimName: example-pvc
+
+volumeMounts:
+ enabled: false
+ data:
+  - name: example-configmap-volume
+    mountPath: /etc/config
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: true
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: / 
+    kubernetes.io/ingress.class: nginx
+    kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: 
+      paths:
+      - path: /
+        backend:
+          serviceName: hello-world-application
+          servicePort: 8080
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #  cpu: 100m
+  #  memory: 128Mi
+  # requests:
+  #  cpu: 100m
+  #  memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

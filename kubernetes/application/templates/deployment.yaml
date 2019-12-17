@@ -1,0 +1,81 @@
+{{- $env := .Values.env -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: {{ .Values.namespace }}
+  name: {{ template "application.fullname" . }}
+  labels:
+{{ include "application.labels" . | indent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "application.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "application.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      {{- if or .Values.volumes.enabled .Values.pvc_volumes.enabled }}
+      volumes:
+         {{- if or .Values.volumes.enabled }}
+         {{- range .Values.volumes.data }}
+         - name: {{ .name  }}
+           configMap:
+             name: {{ $env | lower }}-{{ .configMap.name }}
+         {{- end }}
+         {{- end }}
+         {{- if .Values.pvc_volumes.enabled }}
+         {{- range .Values.pvc_volumes.data }}
+         - name: {{ .name  }}
+           persistentVolumeClaim:
+             name: {{ .persistentVolumeClaim.claimName }}
+         {{- end }}
+         {{- end }}
+      {{- end }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if or .Values.image.env.enabled }}
+          env:
+            {{- range .Values.image.env.data }}
+            - name: {{ .name }}
+              value: {{ .value }}
+            {{- end }}
+          {{- end }}
+          {{- if or .Values.volumeMounts.enabled }}
+          volumeMounts:
+            {{- range .Values.volumeMounts.data }}
+            - name: {{ .name }}
+              mountPath: {{ .mountPath }}
+            {{- end }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.image.port }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
